@@ -7,6 +7,7 @@ import os
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import numpy as np
+from mmcv.utils import Config
 
 from mmseg.models.builder import build_segmentor
 
@@ -23,7 +24,7 @@ def full_val(model):
     ious, dices = AverageMeter(), AverageMeter()
 
     for dataset_name in dataset_names:
-        data_path = f'{test_folder}/{dataset_name}'
+        data_path = f'/mnt/sdd/nguyen.van.quan/Researchs/Polyp/TestDataset/{dataset_name}'
         X_test = glob.glob('{}/images/*'.format(data_path))
         X_test.sort()
         y_test = glob.glob('{}/masks/*'.format(data_path))
@@ -93,8 +94,11 @@ if __name__ == '__main__':
         )
 
     # model
-    model = build_segmentor(model_cfg)
-    model.init_weights()
+    cfg = Config.fromfile('local_configs/segformer/B1/lawin.b1.512x512.polyp.py')
+    model = build_segmentor(cfg.model)
+    print(model)
+    # torch.load('pretrained/mit_b1.pth')
+    model.backbone.init_weights('pretrained/mit_b1.pth')
     model = model.to(device)
 
     # dataset

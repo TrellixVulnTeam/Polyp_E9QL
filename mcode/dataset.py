@@ -1,3 +1,4 @@
+
 from torch.utils.data import Dataset
 
 import numpy as np
@@ -9,7 +10,7 @@ class ActiveDataset(Dataset):
     dataloader for polyp segmentation tasks
     """
 
-    def __init__(self, image_paths=[], gt_paths=[], trainsize=352, transform=None):
+    def __init__(self, image_paths=[], gt_paths=[], trainsize=384, transform=None):
         self.trainsize = trainsize
         assert len(image_paths) > 0, "Can't find any images in dataset"
         assert len(gt_paths) > 0, "Can't find any mask in dataset"

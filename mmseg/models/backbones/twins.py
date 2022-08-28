@@ -13,7 +13,7 @@ from mmcv.cnn.utils.weight_init import (constant_init, normal_init,
 from mmcv.runner import BaseModule, ModuleList
 from torch.nn.modules.batchnorm import _BatchNorm
 
-from mmseg.models.backbones.mit import EfficientMultiheadAttention
+# from mmseg.models.backbones.mit import EfficientMultiheadAttention
 from mmseg.models.builder import BACKBONES
 from ..utils.embed import PatchEmbed
 

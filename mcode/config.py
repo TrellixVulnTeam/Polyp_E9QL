@@ -13,27 +13,27 @@ from .metrics import AverageMeter
 # config
 # ===============================================================================
 use_wandb = False
-wandb_key = None
+wandb_key = "d0ee13baa7af4379eff80e68b11cf976bbb8d673"
 wandb_project = "Seg-Uper"
 wandb_entity = "ssl-online"
-wandb_name = "TestGroup (2)"
-wandb_group = None
+wandb_name = "RFP (1)"
+wandb_group = "RFP"
 wandb_dir = "./wandb"
 
 seed = 2022
 device = select_device("cuda:0" if torch.cuda.is_available() else 'cpu')
 num_workers = 4
 
-train_images = glob.glob('../Dataset/polyp/TrainDataset/images/*')
-train_masks = glob.glob('../Dataset/polyp/TrainDataset/masks/*')
+train_images = glob.glob('/mnt/sdd/nguyen.van.quan/Researchs/Polyp/TrainDataset/image/*')
+train_masks = glob.glob('/mnt/sdd/nguyen.van.quan/Researchs/Polyp/TrainDataset/mask/*')
 
-test_folder = "../Dataset/polyp/TestDataset"
+test_folder = "/mnt/sdd/nguyen.van.quan/Researchs/Polyp/TestDataset"
 test_images = glob.glob(f'{test_folder}/*/images/*')
 test_masks = glob.glob(f'{test_folder}/*/masks/*')
 
 save_path = "runs/test"
 
-image_size = 352
+image_size = 384
 
 bs = 16
 bs_val = 2
@@ -75,34 +75,58 @@ val_transform = A.Compose([
 ])
 
 pretrained = "/mnt/sdd/nguyen.van.quan/BKAI-kaggle/pretrained/mit_b1_mmseg.pth"
+# model_cfg = dict(
+#     type='SunSegmentor',
+#     backbone=dict(
+#         type='MixVisionTransformer',
+#         in_channels=3,
+#         embed_dims=64,
+#         num_stages=4,
+#         num_layers=[2, 2, 2, 2],
+#         num_heads=[1, 2, 5, 8],
+#         patch_sizes=[7, 3, 3, 3],
+#         sr_ratios=[8, 4, 2, 1],
+#         out_indices=(0, 1, 2, 3),
+#         mlp_ratio=4,
+#         qkv_bias=True,
+#         drop_rate=0.0,
+#         attn_drop_rate=0.0,
+#         drop_path_rate=0.1,
+#         pretrained=None),
+#     decode_head=dict(
+#         type='SSFormerHead',
+#         in_channels=[64, 128, 320, 512],
+#         in_index=[0, 1, 2, 3],
+#         channels=256,
+#         dropout_ratio=0.1,
+#         num_classes=1,
+#         norm_cfg=dict(type='BN', requires_grad=True),
+#         align_corners=False,
+#         loss_decode=dict(type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0))
+# )
+
+
 model_cfg = dict(
-    type='SunSegmentor',
+    type='EncoderDecoder',
+    pretrained='pretrained/mit_b1.pth',
     backbone=dict(
-        type='MixVisionTransformer',
-        in_channels=3,
-        embed_dims=64,
-        num_stages=4,
-        num_layers=[2, 2, 2, 2],
-        num_heads=[1, 2, 5, 8],
-        patch_sizes=[7, 3, 3, 3],
-        sr_ratios=[8, 4, 2, 1],
-        out_indices=(0, 1, 2, 3),
-        mlp_ratio=4,
-        qkv_bias=True,
-        drop_rate=0.0,
-        attn_drop_rate=0.0,
-        drop_path_rate=0.1,
-        pretrained=pretrained),
+        type='mit_b1',
+        style='pytorch'),
     decode_head=dict(
-        type='MLP_OSAHead_v5',
+        type='LAWINHead',
         in_channels=[64, 128, 320, 512],
         in_index=[0, 1, 2, 3],
-        channels=256,
+        channels=128,
         dropout_ratio=0.1,
         num_classes=1,
         norm_cfg=dict(type='BN', requires_grad=True),
         align_corners=False,
-        loss_decode=dict(type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0))
-)
+        concat_fuse=True,
+        depth=1,
+        decoder_params=dict(embed_dim=512, in_dim=512, reduction=2, proj_type='conv', use_scale=True, mixing=True),
+        loss_decode=dict(type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)),
+    # model training and testing settings
+    train_cfg=dict(),
+    test_cfg=dict(mode='whole'))
 
 # ===============================================================================
