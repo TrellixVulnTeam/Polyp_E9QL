@@ -6,6 +6,20 @@ from .attention import *
 from mmseg.ops import resize
 from mmseg.models.utils import SELayer
 from .axial_attention import AA_kernel 
+"""
+ *: experimenting
+ X: not good
+ V: good
+ ~: hesitating
+  : just idea
+ 
+"""
+# remove SE layer or change location                                            X
+# conv3x3 -> conv 1x1                               0.853 (clinicdb up)         V
+# add instead of cat and fuse                                                   X
+# use last linear                                                               X
+# use output from linear proj, not last input       colondb up                  X
+# add residual with 3 linear                                                    X
 class MLP_OSA(nn.Module):
     def __init__(self,
                  interpolate_mode='bilinear',
@@ -18,36 +32,32 @@ class MLP_OSA(nn.Module):
         self.ops = ops
         self.in_channels = in_channels
         self.channels = channels
-        num_inputs = len(self.in_channels)
+        num_inputs = len(self.in_channels) 
 
-        # self.convs = nn.ModuleList()
-        # for i in range(num_inputs):
-        #     convs = nn.Sequential(nn.Conv2d(self.channels, self.channels, 3, padding=1, bias=False), nn.ReLU())
-        #     self.convs.append(convs)
 
         self.linear_projections = nn.ModuleList()
         for i in range(num_inputs - 1):
             self.linear_projections.append(
                 nn.Sequential(
-                    SELayer(self.channels * 2),
+                    SELayer(self.channels*2),
                     ConvModule(
                     in_channels=self.channels * 2 if self.ops == 'cat' else self.channels,
                     out_channels=self.channels, norm_cfg=None,
                     kernel_size=3, 
                     padding=1),
                     
-                )
+                ), 
             )
         
         self.aa_module = AA_kernel(self.channels, self.channels)
         self.fusion_conv = ConvModule(
-            in_channels=self.channels * num_inputs,
+            in_channels=self.channels * (num_inputs),
             out_channels=self.channels,
             kernel_size=3, padding=1,
             norm_cfg=None)
         
         self.layer_attn = LayerAttention(
-            self.channels * num_inputs,
+            self.channels * (num_inputs),
             groups=num_inputs, la_down_rate=4
         )
 
@@ -67,7 +77,8 @@ class MLP_OSA(nn.Module):
         _out = torch.empty(
             _inputs[0].shape
         )
-        outs = [_inputs[-1]]
+        outs = [_inputs[-1]]  
+              
         for idx in range(len(_inputs) - 1, 0, -1):
             linear_prj = self.linear_projections[idx - 1]
             # cat first 2 from _inputs
@@ -89,10 +100,7 @@ class MLP_OSA(nn.Module):
         out = self.layer_attn(out)
         out = self.fusion_conv(out)
         aa_atten = self.aa_module(out)
-        # out  = outs[-1]  + aa_atten
         out  = out  + aa_atten
-        out += outs[-1]
+        out = out+ outs[-1]
         
-        outs.append(out)
-
-        return outs
+        return out

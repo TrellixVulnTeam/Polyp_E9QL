@@ -1,3 +1,96 @@
+import torch
+import torch.nn as nn
+from mmcv.cnn import ConvModule
+from .attention import *
+from .context_module import CFPModule
+from mmseg.ops import resize
+from mmseg.models.utils import SELayer
+from .axial_attention import AA_kernel 
+from .attention import FocusGate
+class MLP_OSA(nn.Module):
+    def __init__(self,
+                 interpolate_mode='bilinear',
+                 ops='cat', in_channels=None, channels=None,
+                 **kwargs):
+        super().__init__()
+
+        self.interpolate_mode = interpolate_mode
+        assert ops in ['cat', 'add']
+        self.ops = ops
+        self.in_channels = in_channels
+        self.channels = channels
+        num_inputs = len(self.in_channels)
+
+
+        self.linear_projections = nn.ModuleList()
+        for i in range(num_inputs - 1):
+            self.linear_projections.append(
+                nn.Sequential(
+                    ConvModule(
+                    in_channels=self.channels * 2 if self.ops == 'cat' else self.channels,
+                    out_channels=self.channels, norm_cfg=None,
+                    kernel_size=1, 
+                    padding=0),
+                )
+            )
+
+        self.aa_module = AA_kernel(self.channels, self.channels)
+        self.CFP_1 = CFPModule(self.channels, d = 8)
+        self.fpn_bottleneck = ConvModule(self.channels, 1,kernel_size=1, padding=0)
+        
+        self.ra_conv = ConvModule(self.channels , self.channels, kernel_size=3, padding=1)
+
+    def forward(self, inputs):
+        # Receive 4 stage backbone feature map: 1/4, 1/8, 1/16, 1/32
+        _inputs = []
+        for idx in range(len(inputs)):
+            x = inputs[idx]
+            _inputs.append(
+                resize(
+                    input=x,
+                    size=inputs[0].shape[2:],
+                    mode=self.interpolate_mode,
+                    align_corners=False))
+
+        # slow concatenate
+        _out = torch.empty(
+            _inputs[0].shape
+        )
+        outs = [_inputs[-1]]
+        for idx in range(len(_inputs) - 1, 0, -1):
+            linear_prj = self.linear_projections[idx - 1]
+            # cat first 2 from _inputs
+            if idx == len(_inputs) - 1:
+                x1 = _inputs[idx]
+                x2 = _inputs[idx - 1]
+            # if not first 2 then cat from prev outs and _inputs
+            else:
+                x1 = _out
+                x2 = _inputs[idx - 1]
+            if self.ops == 'cat':
+                x = torch.cat([x1, x2], dim=1)
+            else:
+                x = x1 + x2
+            _out = linear_prj(x)
+            outs.append(_out)
+            
+        # out = torch.cat(outs, dim=1)
+        # out = self.layer_attn(out)
+        # out = self.fusion_conv(out)
+        ra_atten = self.fpn_bottleneck(_out)
+        ra_atten = -1*(torch.sigmoid(ra_atten)) + 1
+        
+        cfp_out = self.CFP_1(_out) 
+        aa_atten = self.aa_module(cfp_out)
+        aa_atten += cfp_out + outs[-1]
+        
+        out = ra_atten.expand(-1, self.channels, -1, -1).mul(aa_atten)
+        out = self.ra_conv(out)
+        
+        return out
+    
+
+
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
@@ -6,17 +99,11 @@ from mmcv.cnn import ConvModule, xavier_init, constant_init
 from .lib.attention import SequentialPolarizedSelfAttention, CBAMBlock
 from .psp_head import PPM
 from mmseg.ops import resize
-from mmseg.models.utils import SELayer
-"""
-  : just idea
- *: experimenting
- X: not good
- V: good
- ~: hesitating
-"""
-# add se layer to lateral                   X
-# attention to psp output                   X
-# polarize attention                        V 
+
+
+
+# Fusion node 3 -> 2
+# upsample attention and psa softmax -> sigmoid
 class FusionNode(nn.Module):
 
     def __init__(self,
@@ -27,7 +114,7 @@ class FusionNode(nn.Module):
                  out_norm_cfg=None,
                  upsample_mode='bilinear',
                  op_num=2,
-                 upsample_attn=True):
+                 upsample_attn=False):
         super(FusionNode, self).__init__()
         assert op_num == 2 or op_num == 3
         self.with_out_conv = with_out_conv
@@ -84,6 +171,7 @@ class FusionNode(nn.Module):
 
     def dynamicFusion(self, x):
         x1, x2 = x[0], x[1]
+        
         batch, channel, height, width = x1.size()
         weight1 = self.gap(x1)
         weight2 = self.gap(x2)
@@ -102,6 +190,7 @@ class FusionNode(nn.Module):
         if self.op_num == 3:
             x3 = x[2]
             x1 = self.pre_fusion(result)
+            # x1 = result
             
             weight1 = self.gap(x1)
             weight3 = self.gap(x3)
@@ -128,6 +217,7 @@ class FusionNode(nn.Module):
     def forward(self, x):
         out_size=x[0].shape[-2:]
         inputs = []
+        
         for feat in x:
             inputs.append(self._resize(feat, out_size))
 
@@ -183,13 +273,10 @@ class RCFPN(nn.Module):
             act_cfg=self.act_cfg)
         # add lateral connections
         self.lateral_convs = nn.ModuleList()
-        self.weighting_convs = nn.ModuleList()
         # self.gates = nn.ModuleList()
         self.RevFP = nn.ModuleList()
         
         for i in range(self.start_level, self.backbone_end_level - 1):
-            # w_conv = SELayer(channels=in_channels[i])
-            # self.weighting_convs.append(w_conv)
             l_conv = ConvModule(
                 in_channels[i],
                 out_channels,
@@ -197,7 +284,6 @@ class RCFPN(nn.Module):
                 norm_cfg=norm_cfg,
                 act_cfg=None)
             self.lateral_convs.append(l_conv)
-
             rev_fuse = FusionNode(
             in_channels=out_channels,
             out_channels=out_channels,
@@ -205,6 +291,7 @@ class RCFPN(nn.Module):
             out_norm_cfg=norm_cfg,
             op_num=3)
             self.RevFP.append(rev_fuse)
+        
             
     def init_weights(self):
         """Initialize the weights of module."""
@@ -219,7 +306,7 @@ class RCFPN(nn.Module):
         psp_outs = torch.cat(psp_outs, dim=1)
         output = self.bottleneck(psp_outs)
 
-        return output                                                                                                                                                        
+        return output
     def forward(self, inputs):
         """Forward function."""
         # build P3-P5
@@ -231,7 +318,7 @@ class RCFPN(nn.Module):
         
         used_backbone_levels = len(feats)
         for i in range(used_backbone_levels - 1, 0, -1):
-            feats[i-1] = self.RevFP[i-1]([feats[i-1], feats[i], feats[i]])
+            feats[i-1] = self.RevFP[i-1]([feats[i-1], feats[i], feats[i-1]])
 
 
         return feats
