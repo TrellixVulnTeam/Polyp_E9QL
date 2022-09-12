@@ -24,7 +24,7 @@ from .lib.mlp_osa import MLP_OSA
   : just idea
 """
 
-# BAM module instead of RA
+# BAM module instead of RA          X
 
 @HEADS.register_module()
 class UPerHeadV3(BaseDecodeHead):
