@@ -1,4 +1,4 @@
-# import wandb
+import wandb
 from tqdm import tqdm
 from tabulate import tabulate
 import logging
@@ -56,9 +56,9 @@ def full_val(model):
         mean_iou, mean_dice, _, _ = get_scores(gts, prs)
         ious.update(mean_iou)
         dices.update(mean_dice)
-        # if use_wandb:
-        #     wandb.log({f'{dataset_name}_dice': mean_dice})
-        #     wandb.log({f'{dataset_name}_iou': mean_iou})
+        if use_wandb:
+            wandb.log({f'{dataset_name}_dice': mean_dice})
+            wandb.log({f'{dataset_name}_iou': mean_iou})
         table.append([dataset_name, mean_iou, mean_dice])
     table.append(['Total', ious.avg, dices.avg])
 
@@ -82,17 +82,17 @@ if __name__ == '__main__':
             log_f.write(f"{config_data} \n")
 
     set_seed_everything(seed)
-    # if use_wandb:
-    #     assert wandb_group is not None, "Please specify wandb group"
-    #     wandb.login(key=wandb_key)
-    #     wandb.init(
-    #         project=wandb_project,
-    #         entity=wandb_entity,
-    #         name=wandb_name,
-    #         dir=wandb_dir,
-    #         group=wandb_group,
-    #         settings=wandb.Settings(code_dir="/mnt/sdd/nguyen.van.quan/Researchs/Polyp/mmseg/models/decode_heads/")
-    #     )
+    if use_wandb:
+        assert wandb_group is not None, "Please specify wandb group"
+        wandb.login(key=wandb_key)
+        wandb.init(
+            project=wandb_project,
+            entity=wandb_entity,
+            name=wandb_name,
+            dir=wandb_dir,
+            group=wandb_group,
+            settings=wandb.Settings(code_dir="/mnt/sdd/nguyen.van.quan/Researchs/Polyp/mmseg/models/decode_heads/")
+        )
 
     # model
     model = build_segmentor(model_cfg)
@@ -172,8 +172,8 @@ if __name__ == '__main__':
             f.write("EP {} TRAIN: LOSS = {}, avg_dice = {}, avg_iou = {} \n".format(ep, train_loss_meter.avg, dice_meter.avg,
                                                                            iou_meter.avg))
 
-        # if use_wandb:
-        #     wandb.log({'train_dice': dice_meter.avg})
+        if use_wandb:
+            wandb.log({'train_dice': dice_meter.avg})
         if ep >= save_ckpt_ep:
             torch.save(model.state_dict(), f"{save_path}/checkpoints/model_{ep}.pth")
 
@@ -187,5 +187,5 @@ if __name__ == '__main__':
 
             print("================================\n")
 
-    # if use_wandb:
-    #     wandb.save(f"{save_path}/exp.log")
+    if use_wandb:
+        wandb.save(f"{save_path}/exp.log")

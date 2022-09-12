@@ -18,11 +18,11 @@ wandb_key = "d0ee13baa7af4379eff80e68b11cf976bbb8d673"
 wandb_project = "Seg-Uper"
 wandb_entity = "ssl-online"
 wandb_name = "RFP (1)"
-wandb_group = "RFP B3"
+wandb_group = "RFP B3 V2"
 wandb_dir = "./wandb"
 
 seed = 2022
-device = "cuda:1" if torch.cuda.is_available() else 'cpu'
+device = "cuda:0" if torch.cuda.is_available() else 'cpu'
 num_workers = 8
 
 train_images = glob.glob('/mnt/sdd/nguyen.van.quan/Researchs/Polyp/TrainDataset/image/*')
