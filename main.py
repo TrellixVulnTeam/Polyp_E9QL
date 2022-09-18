@@ -12,7 +12,7 @@ from mmseg.models.builder import build_segmentor
 
 from mcode import ActiveDataset, get_scores, LOGGER, set_seed_everything, set_logging
 from mcode.config import *
-
+from mcode.utils import CosineWarmupScheduler
 
 def full_val(model):
     print("#" * 20)
@@ -124,9 +124,11 @@ if __name__ == '__main__':
 
     # optimizer
     optimizer = torch.optim.AdamW(model.parameters(), init_lr, betas=(0.9, 0.999), weight_decay=0.01)
-    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
-                                                              T_max=len(train_loader) * n_eps,
-                                                              eta_min=init_lr / 1000)
+    # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
+    #                                                           T_max=len(train_loader) * n_eps,
+    #                                                           eta_min=init_lr / 1000)
+    
+    lr_scheduler = CosineWarmupScheduler(optimizer=optimizer, warmup=300, max_iters=len(train_loader) * n_eps)
 
     with open(f"{save_path}/exp.log", 'a') as f:
         f.write("Start Training...\n")

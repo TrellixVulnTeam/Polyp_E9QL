@@ -17,6 +17,31 @@ from mmseg.models.utils import SELayer
 # add se layer to lateral                   X
 # attention to psp output                   X
 # polarize attention                        V 
+
+
+class DepthwiseConvBlock(nn.Module):
+    """
+    Depthwise seperable convolution. 
+    
+    
+    """
+    def __init__(self, in_channels, out_channels, kernel_size=1, stride=1, padding=0, dilation=1, freeze_bn=False):
+        super(DepthwiseConvBlock,self).__init__()
+        self.depthwise = nn.Conv2d(in_channels, in_channels, kernel_size, stride, 
+                               padding, dilation, groups=in_channels, bias=False)
+        self.pointwise = nn.Conv2d(in_channels, out_channels, kernel_size=1, 
+                                   stride=1, padding=0, dilation=1, groups=1, bias=False)
+        
+        
+        self.bn = nn.BatchNorm2d(out_channels, momentum=0.9997, eps=4e-5)
+        self.act = nn.ReLU()
+        
+    def forward(self, inputs):
+        x = self.depthwise(inputs)
+        x = self.pointwise(x)
+        x = self.bn(x)
+        return self.act(x)
+
 class FusionNode(nn.Module):
 
     def __init__(self,
@@ -190,12 +215,7 @@ class RCFPN(nn.Module):
         for i in range(self.start_level, self.backbone_end_level - 1):
             # w_conv = SELayer(channels=in_channels[i])
             # self.weighting_convs.append(w_conv)
-            l_conv = ConvModule(
-                in_channels[i],
-                out_channels,
-                kernel_size=1, padding=0,   
-                norm_cfg=norm_cfg,
-                act_cfg=None)
+            l_conv = DepthwiseConvBlock(in_channels[i], out_channels, kernel_size=3, padding=1)
             self.lateral_convs.append(l_conv)
 
             rev_fuse = FusionNode(

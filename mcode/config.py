@@ -17,8 +17,8 @@ use_wandb = True
 wandb_key = "d0ee13baa7af4379eff80e68b11cf976bbb8d673"
 wandb_project = "Seg-Uper"
 wandb_entity = "ssl-online"
-wandb_name = "RFP (1)"
-wandb_group = "RFP B3 V2"
+wandb_name = "TCN (1)"
+wandb_group = "TCN"
 wandb_dir = "./wandb"
 
 seed = 2022

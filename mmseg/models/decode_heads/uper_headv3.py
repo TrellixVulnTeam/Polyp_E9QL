@@ -5,7 +5,7 @@ from mmcv.cnn import ConvModule
 
 from mmseg.ops import resize
 
-from .rcfpn import RCFPN
+from .lib.rcfpn import RCFPN
 from ..builder import HEADS
 from .decode_head import BaseDecodeHead
 from .psp_head import PPM

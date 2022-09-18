@@ -9,6 +9,8 @@ import torch
 from mmcv.cnn import get_model_complexity_info
 
 from pytorch_lightning import seed_everything
+from torch import optim
+import math
 
 
 def set_seed_everything(seed: int):
@@ -85,3 +87,21 @@ def get_model_info(model, tsize):
     print('!!!Please be cautious if you use the results in papers. '
           'You may need to check if all ops are supported and verify that the '
           'flops computation is correct.')
+    
+
+class CosineWarmupScheduler(optim.lr_scheduler._LRScheduler):
+
+    def __init__(self, optimizer, warmup, max_iters):
+        self.warmup = warmup
+        self.max_num_iters = max_iters
+        super().__init__(optimizer)
+
+    def get_lr(self):
+        lr_factor = self.get_lr_factor(epoch=self.last_epoch)
+        return [base_lr * lr_factor for base_lr in self.base_lrs]
+
+    def get_lr_factor(self, epoch):
+        lr_factor = 0.5 * (1 + np.cos(math.pi * epoch / self.max_num_iters))
+        if epoch <= self.warmup:
+            lr_factor *= epoch * 1.0 / self.warmup
+        return lr_factor
