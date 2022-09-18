@@ -34,7 +34,12 @@ class MLP_OSA(nn.Module):
         self.channels = channels
         num_inputs = len(self.in_channels) 
 
-
+        self.up_attns = nn.ModuleList()
+        for i in range(num_inputs - 1):
+            self.up_attns.append(
+                UpsampleAttention(self.channels)
+            )
+        
         self.linear_projections = nn.ModuleList()
         for i in range(num_inputs - 1):
             self.linear_projections.append(
@@ -67,11 +72,11 @@ class MLP_OSA(nn.Module):
         for idx in range(len(inputs)):
             x = inputs[idx]
             _inputs.append(
-                resize(
+                self.up_attns(resize(
                     input=x,
                     size=inputs[0].shape[2:],
                     mode=self.interpolate_mode,
-                    align_corners=False))
+                    align_corners=False)), inputs[0])
 
         # slow concatenate
         _out = torch.empty(

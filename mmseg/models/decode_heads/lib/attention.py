@@ -11,8 +11,30 @@ import torch.nn as nn
 import torch.nn.functional as F
 from .conv import Conv
 import math
-from mmcv.cnn import ConvModule
 from mmseg.models.utils import *
+from mmcv.cnn import ConvModule, xavier_init, constant_init
+
+class UpsampleAttention(nn.Module):
+    def __init__(self, in_channel, ) -> None:
+        super().__init__()
+        self.spatial_weight = nn.Conv2d(
+            in_channel * 2, 1, kernel_size=3, padding=1, bias=True)
+        self.temp = nn.Parameter(
+            torch.ones(1, dtype=torch.float32), requires_grad=True)
+        for m in self.spatial_weight.modules():
+            if isinstance(m, nn.Conv2d):
+                constant_init(m, 0)
+    def forward(self, x1, x2):
+        batch, channel, height, width = x1.size() # x1 : bigger resolution
+        upsample_weight = (
+                self.temp * channel**(-0.5) *
+                self.spatial_weight(torch.cat((x1, x2), dim=1)))
+        upsample_weight = F.softmax(
+            upsample_weight.reshape(batch, 1, -1), dim=-1).reshape(
+                batch, 1, height, width) * height * width
+        x2 = upsample_weight * x2
+        return x2
+
 class self_attn(nn.Module):
     def __init__(self, in_channels, mode='hw'):
         super(self_attn, self).__init__()
