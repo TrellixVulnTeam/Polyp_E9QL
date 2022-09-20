@@ -21,8 +21,8 @@ wandb_name = "TCN (1)"
 wandb_group = "TCN"
 wandb_dir = "./wandb"
 
-seed = 2022
-device = "cuda:0" if torch.cuda.is_available() else 'cpu'
+seed = 42
+device = "cuda:1" if torch.cuda.is_available() else 'cpu'
 num_workers = 8
 
 train_images = glob.glob('/mnt/sdd/nguyen.van.quan/Researchs/Polyp/TrainDataset/image/*')

@@ -41,7 +41,21 @@ class DepthwiseConvBlock(nn.Module):
         x = self.pointwise(x)
         x = self.bn(x)
         return self.act(x)
+class ConvBlock(nn.Module):
+    """
+    Convolution block with Batch Normalization and ReLU activation.
+    
+    """
+    def __init__(self, in_channels, out_channels, kernel_size=1, stride=1, padding=0, dilation=1, freeze_bn=False):
+        super(ConvBlock,self).__init__()
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride=stride, padding=padding)
+        self.bn = nn.BatchNorm2d(out_channels, momentum=0.9997, eps=4e-5)
+        self.act = nn.ReLU()
 
+    def forward(self, inputs):
+        x = self.conv(inputs)
+        x = self.bn(x)
+        return self.act(x)
 class FusionNode(nn.Module):
 
     def __init__(self,
@@ -215,7 +229,12 @@ class RCFPN(nn.Module):
         for i in range(self.start_level, self.backbone_end_level - 1):
             # w_conv = SELayer(channels=in_channels[i])
             # self.weighting_convs.append(w_conv)
-            l_conv = DepthwiseConvBlock(in_channels[i], out_channels, kernel_size=3, padding=1)
+            l_conv = ConvModule(
+            self.in_channels[i],self.out_channels,
+            3,
+            conv_cfg=None,
+            norm_cfg=self.norm_cfg,
+            act_cfg=self.act_cfg)
             self.lateral_convs.append(l_conv)
 
             rev_fuse = FusionNode(

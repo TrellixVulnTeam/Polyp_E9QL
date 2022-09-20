@@ -34,11 +34,6 @@ class MLP_OSA(nn.Module):
         self.channels = channels
         num_inputs = len(self.in_channels) 
 
-        self.up_attns = nn.ModuleList()
-        for i in range(num_inputs - 1):
-            self.up_attns.append(
-                UpsampleAttention(self.channels)
-            )
         
         self.linear_projections = nn.ModuleList()
         for i in range(num_inputs - 1):
@@ -68,15 +63,17 @@ class MLP_OSA(nn.Module):
 
     def forward(self, inputs):
         # Receive 4 stage backbone feature map: 1/4, 1/8, 1/16, 1/32
+        skip = inputs.pop(0)
         _inputs = []
         for idx in range(len(inputs)):
             x = inputs[idx]
             _inputs.append(
-                self.up_attns(resize(
+                resize(
                     input=x,
                     size=inputs[0].shape[2:],
                     mode=self.interpolate_mode,
-                    align_corners=False)), inputs[0])
+                    align_corners=False))
+        
 
         # slow concatenate
         _out = torch.empty(
@@ -104,8 +101,14 @@ class MLP_OSA(nn.Module):
         out = torch.cat(outs, dim=1)
         out = self.layer_attn(out)
         out = self.fusion_conv(out)
+
         aa_atten = self.aa_module(out)
         out  = out  + aa_atten
-        out = out+ outs[-1]
+        skip = resize(
+                    input=out,
+                    size=out.shape[2:],
+                    mode=self.interpolate_mode,
+                    align_corners=False)
+        out = out + skip
         
         return out
