@@ -13,6 +13,7 @@ from mmseg.models.builder import build_segmentor
 
 from mcode import ActiveDataset, get_scores, LOGGER, set_seed_everything, set_logging
 from mcode.config import *
+from sam import SAM
 
 
 def full_val(model):
@@ -69,6 +70,16 @@ def full_val(model):
     return ious.avg, dices.avg
 
 
+def compute_loss(y_hat, y):
+    losses = []
+    for y_hat in y_hats:
+        loss = loss_weights[0] * loss_fns[0](y_hat.squeeze(1), y.squeeze(1).float()) + \
+                loss_weights[1] * loss_fns[1](y_hat, y)
+        losses.append(loss)
+    losses = sum(_loss for _loss in losses)    
+    return loss, losses
+
+
 if __name__ == '__main__':
     # Create log folder
     if not os.path.exists(f"{save_path}/checkpoints"):
@@ -122,7 +133,8 @@ if __name__ == '__main__':
     total_step = len(train_loader)
 
     # optimizer
-    optimizer = torch.optim.AdamW(model.parameters(), init_lr, betas=(0.9, 0.999), weight_decay=0.01)
+    base_optimizer = torch.optim.AdamW
+    optimizer = SAM(model.parameters(), base_optimizer, rho=0.5, adaptive=True,lr=init_lr, betas=(0.9, 0.999), weight_decay=0.01)
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
                                                               T_max=len(train_loader) * n_eps,
                                                               eta_min=init_lr / 1000)
@@ -145,18 +157,21 @@ if __name__ == '__main__':
             n = sample["image"].shape[0]
             x = sample["image"].to(device)
             y = sample["mask"].to(device).to(torch.int64)
-            y_hats = model(x)
-            losses = []
-            for y_hat in y_hats:
-                loss = loss_weights[0] * loss_fns[0](y_hat.squeeze(1), y.squeeze(1).float()) + \
-                       loss_weights[1] * loss_fns[1](y_hat, y)
-                losses.append(loss)
-            losses = sum(_loss for _loss in losses)
-            losses.backward()
 
-            if batch_id % grad_accumulate_rate == 0:
-                optimizer.step()
-                optimizer.zero_grad()
+            y_hats = model(x)
+            loss, losses = compute_loss(y_hats, y)
+            losses.backward()
+            optimizer.first_step(zero_grad=True)
+
+            y_hats = model(x)
+            loss, losses = compute_loss(y_hats, y)
+            losses.backward()
+            optimizer.second_step(zero_grad=True)
+
+
+            # if batch_id % grad_accumulate_rate == 0:
+            #     optimizer.step()
+            #     optimizer.zero_grad()
             y_hat_mask = y_hats[0].sigmoid()
             pred_mask = (y_hat_mask > 0.5).float()
 
