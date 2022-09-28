@@ -41,7 +41,8 @@ from .mlp_slowcatese_head import MLPSLowCatESEHead
 from .mlp_slowcat_la_head import MLPSLowCatLAHead
 from .ssformer_head import SSFormerHead
 from .lapformerpp_head import LAPFormerPPHead, LAPFormerPPHead_v2, LAPFormerPPHead_v3, \
-    ELAPFormerHead, LAPFormerPPHead_v4
+    LAPFormerPPHead_v4
+from .elapformer_head import ELAPFormerHead
 
 __all__ = [
     'FCNHead', 'PSPHead', 'ASPPHead', 'PSAHead', 'NLHead', 'GCHead', 'CCHead',
