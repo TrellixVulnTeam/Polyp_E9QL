@@ -79,7 +79,7 @@ class ELAPFormerHead(BaseDecodeHead):
             _inputs[1].shape
         )
         outs = [_inputs[-1]] # 1/8, 1/8, 1/8, 1/8, 1/4
-        for idx in range(len(inputs), 0, -1):
+        for idx in range(len(inputs) - 1, 0, -1):
             linear_prj = self.linear_projections[idx - 1]
             # cat first 2 from _inputs
             if idx == len(_inputs) - 1:
@@ -120,7 +120,7 @@ class ELAPFormerHead(BaseDecodeHead):
         # upsample all 1/8 to 1/4
         out = resize(
             input=out,
-            size=out[-1].shape[2:],
+            size=outs[-1].shape[2:],
             mode=self.interpolate_mode,
             align_corners=self.align_corners
         )
