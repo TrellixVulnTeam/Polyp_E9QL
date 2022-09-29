@@ -79,7 +79,7 @@ class ELAPFormerHead(BaseDecodeHead):
             _inputs[1].shape
         )
         outs = [_inputs[-1]] # 1/8, 1/8, 1/8, 1/8, 1/4
-        for idx in range(len(inputs - 1), 0, -1):
+        for idx in range(len(inputs), 0, -1):
             linear_prj = self.linear_projections[idx - 1]
             # cat first 2 from _inputs
             if idx == len(_inputs) - 1:
