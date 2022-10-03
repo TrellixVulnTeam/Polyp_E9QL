@@ -35,10 +35,10 @@ class LargeKernelAttn(nn.Module):
         return x * weight
 
 
-class MultiScaleConvAttn(nn.Module):
+class MultiScaleStripAttn(nn.Module):
     def __init__(self,
                  channels):
-        super(MultiScaleConvAttn, self).__init__()
+        super(MultiScaleStripAttn, self).__init__()
         self.dwconv = nn.Conv2d(
             in_channels=channels,
             out_channels=channels,
