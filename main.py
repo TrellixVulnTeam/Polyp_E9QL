@@ -134,8 +134,8 @@ if __name__ == '__main__':
 
     # optimizer
     base_optimizer = torch.optim.AdamW
-    optimizer = SAM(model.parameters(), base_optimizer, rho=0.5, adaptive=True,lr=init_lr, betas=(0.9, 0.999), weight_decay=0.01)
-    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
+    optimizer = SAM(model.parameters(), base_optimizer, rho=0.05, adaptive=False,lr=init_lr, betas=(0.9, 0.999), weight_decay=0.01)
+    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer.base_optimizer,
                                                               T_max=len(train_loader) * n_eps,
                                                               eta_min=init_lr / 1000)
 
