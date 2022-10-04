@@ -43,7 +43,8 @@ from .ssformer_head import SSFormerHead
 from .lapformerpp_head import LAPFormerPPHead, LAPFormerPPHead_v2, LAPFormerPPHead_v3, \
     LAPFormerPPHead_v4
 from .elapformer_head import ELAPFormerHead, ELAPFormerHead_v2, ELAPFormerHead_v3,\
-    ELAPFormerHead_v4, ELAPFormerHead_v5, ELAPFormerHead_v6, ELAPFormerHead_v7
+    ELAPFormerHead_v4, ELAPFormerHead_v5, ELAPFormerHead_v6, ELAPFormerHead_v7, \
+    ELAPFormerHead_v8
 
 __all__ = [
     'FCNHead', 'PSPHead', 'ASPPHead', 'PSAHead', 'NLHead', 'GCHead', 'CCHead',
@@ -60,5 +61,6 @@ __all__ = [
     'MLP_OSAHead_v5', 'LAPFormerPPHead', 'LAPFormerPPHead_v2',
     'LAPFormerPPHead_v3', 'ELAPFormerHead', 'LAPFormerPPHead_v4',
     'ELAPFormerHead_v2', 'ELAPFormerHead_v3', 'ELAPFormerHead_v4',
-    'ELAPFormerHead_v5', 'ELAPFormerHead_v6', 'ELAPFormerHead_v7'
+    'ELAPFormerHead_v5', 'ELAPFormerHead_v6', 'ELAPFormerHead_v7',
+    'ELAPFormerHead_v8'
 ]
