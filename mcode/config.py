@@ -18,7 +18,11 @@ wandb_key = "d0ee13baa7af4379eff80e68b11cf976bbb8d673"
 wandb_project = "Polyp-Research"
 wandb_entity = "ssl-online"
 wandb_name = "RFP (1)"
+<<<<<<< HEAD
 wandb_group = "RFP"
+=======
+wandb_group = "RFP B1"
+>>>>>>> e9fe996d27f9a14ca22fecba0478581497b81e52
 wandb_dir = "./wandb"
 
 seed = 2022
